@@ -1,0 +1,11 @@
+pip
+nextcord[voice,speed]
+requests[socks]
+async-timeout
+PyNaCl
+Flask
+yt-dlp
+aiodns
+Brotli
+cchardet
+google-api-python-client
