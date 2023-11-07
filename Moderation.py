@@ -1,37 +1,42 @@
-import nextcord
+from nextcord import (
+    ui,
+    ButtonStyle,
+    Interaction,
+    Embed,
+    Colour,
+    Member,
+    TextChannel,
+    message_command,
+)
 from nextcord.ext import commands, application_checks
-from nextcord.ext.commands.errors import MissingPermissions, CommandNotFound
+from nextcord.ext.commands.errors import MissingPermissions, MissingRequiredArgument
+from nextcord.errors import NotFound, HTTPException
 from datetime import timedelta, datetime
 from decimal import Decimal
 from googleapiclient import discovery
+from traceback import format_exception
 
 
-class ModerationMenu(nextcord.ui.View):
+class ModerationMenu(ui.View):
     def __init__(self, message, user):
         super().__init__()
         self.message = message
         self.user = user
 
-    @nextcord.ui.button(label="Ban", style=nextcord.ButtonStyle.danger)
-    async def ban_callback(
-        self, button: nextcord.ui.Button, interaction: nextcord.Interaction
-    ):
+    @ui.button(label="Ban", style=ButtonStyle.danger)
+    async def ban_callback(self, button: ui.Button, interaction: Interaction):
         button.disabled = True
         await self.user.ban()
         await interaction.response.send_message("Succesfully banned.", ephemeral=True)
 
-    @nextcord.ui.button(label="Kick", style=nextcord.ButtonStyle.primary)
-    async def kick_callback(
-        self, button: nextcord.ui.Button, interaction: nextcord.Interaction
-    ):
+    @ui.button(label="Kick", style=ButtonStyle.primary)
+    async def kick_callback(self, button: ui.Button, interaction: Interaction):
         button.disabled = True
         await self.user.kick()
         await interaction.response.send_message("Succesfully kicked.", ephemeral=True)
 
-    @nextcord.ui.button(label="Mute", style=nextcord.ButtonStyle.primary)
-    async def mute_callback(
-        self, button: nextcord.ui.Button, interaction: nextcord.Interaction
-    ):
+    @ui.button(label="Mute", style=ButtonStyle.primary)
+    async def mute_callback(self, button: ui.Button, interaction: Interaction):
         await self.user.timeout(timeout=timedelta(days=1))
         await interaction.response.send_message(
             f"Succesfully muted {self.user} for 1 day.", ephemeral=True
@@ -47,9 +52,7 @@ class ModerationMenu(nextcord.ui.View):
 
     async def on_error(self, error, item, interaction):
         await interaction.response.defer()
-        exception = "\n".join(
-            traceback.format_exception(type(error), error, error.__traceback__)
-        )
+        exception = "\n".join(format_exception(type(error), error, error.__traceback__))
         exception = f"```py\n{exception}```"
         await interaction.channel.send(
             f"An error occured in the button `{item.custom_id}`:\n{exception}"
@@ -91,18 +94,14 @@ class Moderation(commands.Cog):
             ] = f"{payload.emoji.name}Pyth0nC0de{payload.user_id}Pyth0nC0de{payload.emoji.url}"
         channel = self.client.get_channel(self.LOG_CHANNEL_ID)
         user = self.client.get_user(payload.user_id)
-        embed = nextcord.Embed(
-            title="Reaction Removed", description=f"Removed by {user}"
-        )
+        embed = Embed(title="Reaction Removed", description=f"Removed by {user}")
         embed.add_field(name="Emoji", value=f":{payload.emoji.name}:")
         await channel.send(embed=embed)
 
     @commands.Cog.listener()
     async def on_raw_reaction_add(self, payload):
         channel = self.client.get_channel(self.LOG_CHANNEL_ID)
-        embed = nextcord.Embed(
-            title="Reaction Added", description=f"Added by {payload.member}"
-        )
+        embed = Embed(title="Reaction Added", description=f"Added by {payload.member}")
         embed.add_field(name="Emoji", value=f":{payload.emoji.name}:")
         await channel.send(embed=embed)
 
@@ -130,7 +129,7 @@ class Moderation(commands.Cog):
                 for data in multiple:
                     split_data = data.split("Pyth0nC0de")
                     user = self.client.get_user(int(split_data[1]))
-                    embed = nextcord.Embed(
+                    embed = Embed(
                         title=f"Deleted Reaction", description=f":{split_data[0]}:"
                     )
                     embed.set_author(name=str(user), icon_url=user.display_avatar)
@@ -144,7 +143,7 @@ class Moderation(commands.Cog):
             ):
                 split_data = self.reaction_dict[message.channel.id].split("Pyth0nC0de")
                 user = message.guild.get_member(int(split_data[1]))
-                embed = nextcord.Embed(
+                embed = Embed(
                     title=f"Deleted Reaction", description=f":{split_data[0]}:"
                 )
                 embed.set_author(name=str(user), icon_url=user.display_avatar)
@@ -202,9 +201,7 @@ class Moderation(commands.Cog):
             embeds = []
             for message in data:
                 author = com_message.guild.get_member(message["author"])
-                embed = nextcord.Embed(
-                    title=f"Edited Message", timestamp=message["created"]
-                )
+                embed = Embed(title=f"Edited Message", timestamp=message["created"])
                 embed.add_field(name="Before: ", value=message["before"])
                 embed.add_field(name="After: ", value=message["after"])
                 embed.set_author(name=str(author), icon_url=author.display_avatar)
@@ -282,7 +279,7 @@ class Moderation(commands.Cog):
                 if message["attachments"]:
                     attachments.extend(message["attachments"])
                 author = com_message.guild.get_member(message["author"])
-                embed = nextcord.Embed(
+                embed = Embed(
                     title=f"Deleted Message",
                     description=message["content"],
                     timestamp=message["created"],
@@ -295,9 +292,9 @@ class Moderation(commands.Cog):
             for attachment in attachments:
                 try:
                     files.append(await attachment.to_file(use_cached=True))
-                except nextcord.errors.NotFound:
+                except NotFound:
                     error = "404 Not Found (error code: 0): asset not found"
-                except nextcord.errors.HTTPException:
+                except HTTPException:
                     error = "415 Unsupported Media Type (error code: 0): failed to get asset"
             if files:
                 await com_message.send(content=error, embeds=embeds, files=files)
@@ -381,9 +378,9 @@ class Moderation(commands.Cog):
                     snip_count += 1
                     if snip_count == 10:
                         return
-                    embed = nextcord.Embed(
+                    embed = Embed(
                         title="Deleted Message",
-                        color=nextcord.Colour.random(),
+                        color=Colour.random(),
                         timestamp=datetime.fromisoformat(createdAt),
                     )
                     embed.add_field(name=auth, value=msg, inline=False)
@@ -397,9 +394,7 @@ class Moderation(commands.Cog):
                             embeds = [embed]
                             for atta in imgs:
                                 embeds.append(
-                                    nextcord.Embed(
-                                        colour=nextcord.Colour.random()
-                                    ).set_image(url=atta)
+                                    Embed(colour=Colour.random()).set_image(url=atta)
                                 )
                     await ctx.send(embeds=embeds)
             self.snipe_dict[id] = "Pyth0nC0de"
@@ -426,9 +421,9 @@ class Moderation(commands.Cog):
                     snip_count += 1
                     if snip_count == 2:
                         return
-                    embed = nextcord.Embed(
+                    embed = Embed(
                         title="Deleted Message",
-                        color=nextcord.Colour.random(),
+                        color=Colour.random(),
                         timestamp=datetime.fromisoformat(createdAt),
                     )
                     embed.add_field(name=auth, value=msg, inline=False)
@@ -442,9 +437,7 @@ class Moderation(commands.Cog):
                             embeds = [embed]
                             for atta in imgs:
                                 embeds.append(
-                                    nextcord.Embed(
-                                        colour=nextcord.Colour.random()
-                                    ).set_image(url=atta)
+                                    Embed(colour=Colour.random()).set_image(url=atta)
                                 )
                     await ctx.send(embeds=embeds)
             self.snipe_dict[id] = wow.replace(wow.split("`~=/")[-1], "")
@@ -472,7 +465,7 @@ class Moderation(commands.Cog):
     async def Mute(
         self,
         message,
-        user: nextcord.Member = None,
+        user: Member = None,
         reason: str = None,
         days: int = 1,
         hours: int = 0,
@@ -496,7 +489,7 @@ class Moderation(commands.Cog):
 
     @commands.command()
     @commands.has_guild_permissions(moderate_members=True)
-    async def Unmute(self, message, user: nextcord.Member = None, reason: str = None):
+    async def Unmute(self, message, user: Member = None, reason: str = None):
         if user is None:
             await message.send("Correct usage is `o!Unmute [user] <reason>`")
         else:
@@ -505,12 +498,12 @@ class Moderation(commands.Cog):
 
     @commands.command()
     @commands.has_guild_permissions(kick_members=True)
-    async def Kick(self, message, user: nextcord.Member = None, *, reason=None):
+    async def Kick(self, message, user: Member = None, *, reason=None):
         if user is None:
             await message.send("Correct usage is `o!Kick <user>`")
         else:
             try:
-                embed = nextcord.Embed(
+                embed = Embed(
                     title=f"You have been kicked from {message.guild}.", description=""
                 )
                 embed.add_field(name="Reason", value=reason)
@@ -519,19 +512,19 @@ class Moderation(commands.Cog):
                 await message.send(
                     "You have insufficient permissions to do this command."
                 )
-            except nextcord.errors.HTTPException:
+            except HTTPException:
                 await message.send("Cannot send messages to this user.", delete_after=3)
             await user.kick(reason=reason)
             await message.send(f"{user.name} has been kicked.")
 
     @commands.command()
     @commands.has_guild_permissions(ban_members=True)
-    async def Ban(self, message, user: nextcord.Member = None, *, reason=None):
+    async def Ban(self, message, user: Member = None, *, reason=None):
         if user is None:
             await message.send("Correct usage is `o!Ban <user>`")
         else:
             try:
-                embed = nextcord.Embed(
+                embed = Embed(
                     title=f"You have been banned from {message.guild}.", description=""
                 )
                 embed.add_field(name="Reason", value=reason)
@@ -540,7 +533,7 @@ class Moderation(commands.Cog):
                 await message.send(
                     "You have insufficient permissions to do this command."
                 )
-            except nextcord.errors.HTTPException:
+            except HTTPException:
                 await message.send("Cannot send messages to this user.", delete_after=3)
             await user.ban(reason=reason)
             await message.send(f"{user.name} has been banned.")
@@ -572,8 +565,8 @@ class Moderation(commands.Cog):
 
     @commands.command()
     @commands.has_permissions(administrator=True)
-    async def member(self, message, member: nextcord.Member):
-        embed = nextcord.Embed(title=f"About {member.name}", description="")
+    async def member(self, message, member: Member):
+        embed = Embed(title=f"About {member.name}", description="")
         embed.set_thumbnail(url=member.display_avatar)
         embed.add_field(name="ID", value=member.id)
         embed.add_field(name="Joined at", value=member.joined_at)
@@ -582,7 +575,7 @@ class Moderation(commands.Cog):
 
     @commands.command()
     @commands.has_permissions(manage_channels=True)
-    async def lock(self, message, channel: nextcord.TextChannel = None):
+    async def lock(self, message, channel: TextChannel = None):
         if channel is None:
             channel = message.channel
         everyone = message.guild.get_role(822525128306196500)
@@ -600,7 +593,7 @@ class Moderation(commands.Cog):
 
     @commands.command()
     @commands.has_permissions(manage_channels=True)
-    async def unlock(self, message, channel: nextcord.TextChannel = None):
+    async def unlock(self, message, channel: TextChannel = None):
         if channel is None:
             channel = message.channel
         await channel.edit(sync_permissions=True, reason="Unlocked channel.")
@@ -619,7 +612,7 @@ class Moderation(commands.Cog):
 
     @commands.command(aliases=["ann"])
     @commands.has_any_role(935239717870518302, 866903831606067261, 822620759255154749)
-    async def announce(self, message, channel: nextcord.TextChannel, *, msg):
+    async def announce(self, message, channel: TextChannel, *, msg):
         await channel.send(msg)
 
     @commands.command()
@@ -637,11 +630,9 @@ class Moderation(commands.Cog):
                 await ctx.send("\n".join(full))
                 return
 
-    @nextcord.message_command(
-        name="Hidden Message Analyser", guild_ids=[822525128306196500]
-    )
+    @message_command(name="Hidden Message Analyser", guild_ids=[822525128306196500])
     @application_checks.has_permissions(manage_messages=True)
-    async def hidden_msg_analyser(self, interaction: nextcord.Interaction, message):
+    async def hidden_msg_analyser(self, interaction: Interaction, message):
         GOOGLE_API_KEY = self.GOOGLE_API_KEY
         # message = message
 
@@ -667,7 +658,7 @@ class Moderation(commands.Cog):
             "languages": ["en"],
         }
         response = cclient.comments().analyze(body=analyze_request).execute()
-        embed = nextcord.Embed(
+        embed = Embed(
             title="High check",
             description=f"Comment Analyzer: {message.content}\n\n[Jump to message]({message.jump_url})",
         )
@@ -694,9 +685,9 @@ class Moderation(commands.Cog):
         embed.set_thumbnail(url=message.author.display_avatar)
         await interaction.send(embed=embed, ephemeral=True)
 
-    @nextcord.message_command(name="Message Analyser", guild_ids=[822525128306196500])
+    @message_command(name="Message Analyser", guild_ids=[822525128306196500])
     @application_checks.has_permissions(manage_messages=True)
-    async def msg_analyser(self, interaction: nextcord.Interaction, message):
+    async def msg_analyser(self, interaction: Interaction, message):
         GOOGLE_API_KEY = self.GOOGLE_API_KEY
         # message = message
 
@@ -722,7 +713,7 @@ class Moderation(commands.Cog):
             "languages": ["en"],
         }
         response = cclient.comments().analyze(body=analyze_request).execute()
-        embed = nextcord.Embed(
+        embed = Embed(
             title="High check",
             description=f"Comment Analyzer: {message.content}\n\n[Jump to message]({message.jump_url})",
         )
@@ -752,109 +743,109 @@ class Moderation(commands.Cog):
     @Kick.error
     async def kick_error(self, ctx, error):
         if isinstance(error, commands.MissingPermissions):
-            embed = nextcord.Embed(
+            embed = Embed(
                 title="Missing Permissions",
                 description="You have insufficient permissions to do this command.",
-                color=nextcord.Color.green(),
+                color=Colour.green(),
             )
             await ctx.send(embed=embed)
 
     @Ban.error
     async def ban_error(self, ctx, error):
         if isinstance(error, commands.MissingPermissions):
-            embed = nextcord.Embed(
+            embed = Embed(
                 title="Missing Permissions",
                 description="You have insufficient permissions to do this command.",
-                color=nextcord.Color.green(),
+                color=Colour.green(),
             )
             await ctx.send(embed=embed)
-        elif isinstance(error, nextcord.errors.HTTPException):
-            embed = nextcord.Embed(
+        elif isinstance(error, HTTPException):
+            embed = Embed(
                 title="HTTP Exception",
                 description="Cannot send messages to this user.",
-                color=nextcord.Color.green(),
+                color=Colour.green(),
             )
             await ctx.send(embed=embed)
 
     @Unban.error
     async def unban_error(self, ctx, error):
         if isinstance(error, commands.MissingPermissions):
-            embed = nextcord.Embed(
+            embed = Embed(
                 title="Missing Permissions",
                 description="You have insufficient permissions to do this command.",
-                color=nextcord.Color.green(),
+                color=Colour.green(),
             )
             await ctx.send(embed=embed)
 
     @Mute.error
     async def mute_error(self, ctx, error):
         if isinstance(error, commands.MissingPermissions):
-            embed = nextcord.Embed(
+            embed = Embed(
                 title="Missing Permissions",
                 description="You have insufficient permissions to do this command.",
-                color=nextcord.Color.green(),
+                color=Colour.green(),
             )
             await ctx.send(embed=embed)
 
     @slowmode.error
     async def mute_error(self, ctx, error):
         if isinstance(error, commands.MissingPermissions):
-            embed = nextcord.Embed(
+            embed = Embed(
                 title="Missing Permissions",
                 description="You have insufficient permissions to do this command.",
-                color=nextcord.Color.green(),
+                color=Colour.green(),
             )
             await ctx.send(embed=embed)
 
     @Purge.error
     async def purge_error(self, ctx, error):
         if isinstance(error, commands.MissingPermissions):
-            embed = nextcord.Embed(
+            embed = Embed(
                 title="Missing Permissions",
                 description="You have insufficient permissions to do this command.",
-                color=nextcord.Color.green(),
+                color=Colour.green(),
             )
             await ctx.send(embed=embed)
 
     @snipe.error
     async def sniped_error(self, ctx, error):
         if isinstance(error, commands.MissingAnyRole):
-            embed = nextcord.Embed(
-                title="Missing Roles", description=error, color=nextcord.Color.green()
+            embed = Embed(
+                title="Missing Roles", description=error, color=Colour.green()
             )
             await ctx.send(embed=embed)
 
     @member.error
     async def member_error(self, ctx, error):
         if isinstance(error, commands.MissingPermissions):
-            embed = nextcord.Embed(
+            embed = Embed(
                 title="Missing Permissions",
                 description="You have insufficient permissions to do this command.",
-                color=nextcord.Color.green(),
+                color=Colour.green(),
             )
             await ctx.send(embed=embed)
-        elif isinstance(error, nextcord.ext.commands.errors.MissingRequiredArgument):
-            embed = nextcord.Embed(
+        elif isinstance(error, MissingRequiredArgument):
+            embed = Embed(
                 title="Missing Required Argument",
                 description=error,
-                color=nextcord.Color.blurple(),
+                color=Colour.blurple(),
             )
             await ctx.send(embed=embed)
 
     @announce.error
     async def announce_error(self, ctx, error):
         if isinstance(error, commands.MissingAnyRole):
-            embed = nextcord.Embed(
+            embed = Embed(
                 title="Missing Permissions",
                 description=error,
-                color=nextcord.Color.green(),
+                color=Colour.green(),
             )
             await ctx.send(embed=embed)
-        elif isinstance(error, nextcord.ext.commands.errors.MissingRequiredArgument):
-            embed = nextcord.Embed(
+        elif isinstance(error, MissingRequiredArgument):
+            embed = Embed(
                 title="Missing Required Argument",
                 description=error,
-                color=nextcord.Color.blurple(),
+                color=Colour.blurple(),
             )
             await ctx.send(embed=embed)
 

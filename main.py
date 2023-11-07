@@ -37,7 +37,7 @@ handler = FileHandler(filename="discord.log", encoding="utf-8", mode="w")
 handler.setFormatter(Formatter("%(asctime)s:%(levelname)s:%(name)s: %(message)s"))
 logger.addHandler(handler)
 from nextcord.ext import commands
-from nextcord.ext.commands.errors import MissingPermissions, CommandNotFound
+from nextcord.ext.commands.errors import CommandNotFound
 
 
 class VerifyMenu(ui.View):
