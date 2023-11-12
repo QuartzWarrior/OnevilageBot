@@ -69,29 +69,25 @@ class Moderation(commands.Cog):
     @commands.Cog.listener()
     async def on_raw_reaction_remove(self, payload):
         try:
-            if self.reaction_dict[payload.channel_id] == "Pyth0nC0de":
-                self.reaction_dict[
-                    payload.channel_id
-                ] = f"{payload.emoji.name}Pyth0nC0de{payload.user_id}Pyth0nC0de{payload.emoji.url}"
-            elif ("Pyth0nC0de" in self.reaction_dict[payload.channel_id]) or (
-                "Pyth0nC0d3" in self.reaction_dict[payload.channel_id]
-            ):
-                if (
-                    "Pyth0nC0d3" in self.reaction_dict[payload.channel_id]
-                    and len(self.reaction_dict[payload.channel_id].split("Pyth0nC0d3"))
-                    >= 2
-                ):
-                    temp = self.reaction_dict[payload.channel_id].split("Pyth0nC0d3")
-                    temp.pop(0)
-                    self.reaction_dict[payload.channel_id] = "Pyth0nC0d3".join(temp)
-                self.reaction_dict[payload.channel_id] = (
-                    self.reaction_dict[payload.channel_id]
-                    + f"Pyth0nC0d3{payload.emoji.name}Pyth0nC0de{payload.user_id}Pyth0nC0de{payload.emoji.url}"
-                )
+            if len(self.reaction_dict[payload.channel_id]) >= 2:
+                self.reaction_dict[payload.channel_id].pop(0)
+            self.reaction_dict[payload.channel_id].append(
+                {
+                    "emoji": payload.emoji.name,
+                    "emoji_url": payload.emoji.url,
+                    "created": payload.event_time,
+                    "author": payload.user_id,
+                }
+            )
         except KeyError:
-            self.reaction_dict[
-                payload.channel_id
-            ] = f"{payload.emoji.name}Pyth0nC0de{payload.user_id}Pyth0nC0de{payload.emoji.url}"
+            self.reaction_dict[payload.channel_id] = [
+                {
+                    "emoji": payload.emoji.name,
+                    "emoji_url": payload.emoji.url,
+                    "created": payload.event_time,
+                    "author": payload.user_id,
+                }
+            ]
         channel = self.client.get_channel(self.LOG_CHANNEL_ID)
         user = self.client.get_user(payload.user_id)
         embed = Embed(title="Reaction Removed", description=f"Removed by {user}")
@@ -118,40 +114,24 @@ class Moderation(commands.Cog):
     )
     async def rs(self, message):
         try:
-            if self.reaction_dict[message.channel.id] == "Pyth0nC0de":
-                await message.send("No reactions to snipe!", delete_after=3)
-            elif (
-                "Pyth0nC0d3" in self.reaction_dict[message.channel.id]
-                and self.reaction_dict[message.channel.id] != "Pyth0nC0d3"
-            ):
-                embeds = []
-                multiple = self.reaction_dict[message.channel.id].split("Pyth0nC0d3")
-                for data in multiple:
-                    split_data = data.split("Pyth0nC0de")
-                    user = self.client.get_user(int(split_data[1]))
-                    embed = Embed(
-                        title=f"Deleted Reaction", description=f":{split_data[0]}:"
-                    )
-                    embed.set_author(name=str(user), icon_url=user.display_avatar)
-                    if split_data[-1] != "":
-                        embed.set_thumbnail(url=split_data[-1])
-                    embeds.append(embed)
-                await message.send(embeds=embeds)
-            elif (
-                "Pyth0nC0de" in self.reaction_dict[message.channel.id]
-                and self.reaction_dict[message.channel.id] != "Pyth0nC0de"
-            ):
-                split_data = self.reaction_dict[message.channel.id].split("Pyth0nC0de")
-                user = message.guild.get_member(int(split_data[1]))
-                embed = Embed(
-                    title=f"Deleted Reaction", description=f":{split_data[0]}:"
-                )
-                embed.set_author(name=str(user), icon_url=user.display_avatar)
-                if split_data[-1] != "":
-                    embed.set_thumbnail(url=split_data[-1])
-                await message.send(embed=embed)
-            self.reaction_dict[message.channel.id] = "Pyth0nC0de"
+            data = self.reaction_dict[message.channel.id]
         except KeyError:
+            await message.send("No reactions to snipe!", delete_after=3)
+            return
+        if len(data) > 0:
+            embeds = []
+            for reaction in data:
+                author = self.client.get_user(reaction["author"])
+                embed = Embed(
+                    title=f"Deleted Reaction", description=f":{reaction['emoji']}:"
+                )
+                embed.set_author(name=str(author), icon_url=author.display_avatar)
+                if reaction["emoji_url"] != "":
+                    embed.set_thumbnail(url=reaction["emoji_url"])
+                embeds.append(embed)
+            await message.send(embeds=embeds)
+            self.reaction_dict[message.channel.id] = []
+        else:
             await message.send("No reactions to snipe!", delete_after=3)
 
     @commands.Cog.listener()
@@ -240,17 +220,15 @@ class Moderation(commands.Cog):
                         "attachments": message.attachments,
                     }
                 )
-
             except KeyError:
-                self.snipe_dict[message.channel.id] = []
-                self.snipe_dict[message.channel.id].append(
+                self.snipe_dict[message.channel.id] = [
                     {
                         "content": message.content,
                         "author": message.author.id,
                         "created": message.created_at,
                         "attachments": message.attachments,
                     }
-                )
+                ]
 
     @commands.command(aliases=["s"])
     @commands.has_any_role(
@@ -303,58 +281,6 @@ class Moderation(commands.Cog):
             self.snipe_dict[com_message.channel.id] = []
         else:
             await com_message.send("No messages to snipe!", delete_after=3)
-
-    # Alternative sniping method
-    # @commands.Cog.listener()
-    # async def on_message_delete(self, message):
-    #  if message.author.bot:
-    #    return
-    #  self.last_deleted = message.content
-    #  self.deleted_author = message.author
-    #  self.createdAt = message.created_at
-    #  self.img = str(message.attachments[0].url) if message.attachments else 'No'
-
-    # Current method
-    @commands.Cog.listener()
-    async def on_message_deleted(self, message):
-        if message.embeds != []:
-            channel = self.client.get_channel(self.LOG_CHANNEL_ID)
-            await channel.send(
-                content=f"Deleted Embed in <#{message.channel.id}> from {message.author}",
-                embeds=message.embeds,
-            )
-        id = message.channel
-
-        cont = message.content if message.content != "" else "*No Content*"
-
-        atta = "No"
-
-        if message.attachments:
-            atta = ""
-            for attchmnt in message.attachments:
-                atta += attchmnt.url if atta == "" else str("!$)($!" + attchmnt.url)
-
-        if atta == "No" and cont == "*No Content*":
-            return
-
-        msg = (
-            str(cont)
-            + "˙"
-            + str(message.author)
-            + "˙"
-            + str(message.author.display_avatar)
-            + "˙"
-            + str(message.created_at)
-            + "˙"
-            + str(atta)
-            + ""
-        )
-        try:
-            e = self.snipe_dict[id]
-        except KeyError:
-            self.snipe_dict[id] = ""
-        new_snip_dict = self.snipe_dict[id].replace("Pyth0nC0de", "")
-        self.snipe_dict[id] = new_snip_dict + "`~=/" + msg
 
     @commands.command(name="modsnipe", aliases=["mods"], hidden=True)
     @commands.has_guild_permissions(manage_messages=True)
