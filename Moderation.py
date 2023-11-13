@@ -68,6 +68,7 @@ class Moderation(commands.Cog):
 
     @commands.Cog.listener()
     async def on_raw_reaction_remove(self, payload):
+        # if (message.author.id in self.BYPASS_IDS): return # Add this code to bypass yourself
         try:
             if len(self.reaction_dict[payload.channel_id]) >= 2:
                 self.reaction_dict[payload.channel_id].pop(0)
@@ -96,6 +97,7 @@ class Moderation(commands.Cog):
 
     @commands.Cog.listener()
     async def on_raw_reaction_add(self, payload):
+        # if (message.author.id in self.BYPASS_IDS): return # Add this code to bypass yourself
         channel = self.client.get_channel(self.LOG_CHANNEL_ID)
         embed = Embed(title="Reaction Added", description=f"Added by {payload.member}")
         embed.add_field(name="Emoji", value=f":{payload.emoji.name}:")
@@ -103,14 +105,15 @@ class Moderation(commands.Cog):
 
     @commands.command()
     @commands.has_any_role(
-        866903831606067261,
-        822620759255154749,
-        822985879243980870,
-        886171242422497312,
-        919433872368869436,
-        905219932776710144,
-        897517045137178686,
-        935239717870518302,
+        866903831606067261,  # Head admin
+        943534018564071555,  # Head admin badge
+        822620759255154749,  # Admin
+        822985879243980870,  # Moderator
+        886171242422497312,  # Staff
+        870813732631109672,  # Popular (Level 50)
+        905219932776710144,  # Helper
+        897517045137178686,  # MVP
+        863471477416394802,  # VIP
     )
     async def rs(self, message):
         try:
@@ -136,8 +139,9 @@ class Moderation(commands.Cog):
 
     @commands.Cog.listener()
     async def on_message_edit(self, before, after):
-        if before.content != after.content and not (
-            before.author.id in [986315141308121129, 946434857368698920]
+        if (
+            before.content
+            != after.content  # and not (message.author.id in self.BYPASS_IDS) # Add this code to bypass yourself
         ):
             try:
                 if len(self.edit_dict[before.channel.id]) >= 2:
@@ -164,13 +168,16 @@ class Moderation(commands.Cog):
 
     @commands.command(aliases=["esnipe", "editsnipe", "snipeedit"])
     @commands.has_any_role(
-        897517045137178686,
-        935239717870518302,
-        919433872368869436,
-        905219932776710144,
-        822985879243980870,  # Mod
-        822620759255154749,
-    )  # Admin
+        866903831606067261,  # Head admin
+        943534018564071555,  # Head admin badge
+        822620759255154749,  # Admin
+        822985879243980870,  # Moderator
+        886171242422497312,  # Staff
+        870813732631109672,  # Popular (Level 50)
+        905219932776710144,  # Helper
+        897517045137178686,  # MVP
+        863471477416394802,  # VIP
+    )
     async def es(self, com_message):
         try:
             data = self.edit_dict[com_message.channel.id]
@@ -206,8 +213,9 @@ class Moderation(commands.Cog):
     async def on_message_delete(self, message):
         if message.author.id == self.client.user.id:
             return
-        if (message.content or message.attachments) and not (
-            message.author.id in [986315141308121129, 946434857368698920]
+        if (
+            message.content
+            or message.attachments  # and not (message.author.id in self.BYPASS_IDS) # Add this code to bypass yourself
         ):
             try:
                 if len(self.snipe_dict[message.channel.id]) >= 2:
@@ -232,15 +240,15 @@ class Moderation(commands.Cog):
 
     @commands.command(aliases=["s"])
     @commands.has_any_role(
-        866903831606067261,
-        822620759255154749,
-        822985879243980870,
-        886171242422497312,
-        919433872368869436,
-        905219932776710144,
-        897517045137178686,
-        935239717870518302,
-        1054451727841116240,
+        866903831606067261,  # Head admin
+        943534018564071555,  # Head admin badge
+        822620759255154749,  # Admin
+        822985879243980870,  # Moderator
+        886171242422497312,  # Staff
+        870813732631109672,  # Popular (Level 50)
+        905219932776710144,  # Helper
+        897517045137178686,  # MVP
+        863471477416394802,  # VIP
     )
     async def snipe(self, com_message):
         try:
@@ -537,7 +545,12 @@ class Moderation(commands.Cog):
             )
 
     @commands.command(aliases=["ann"])
-    @commands.has_any_role(935239717870518302, 866903831606067261, 822620759255154749)
+    @commands.has_any_role(
+        866903831606067261,  # Head admin
+        943534018564071555,  # Head admin badge
+        941732494884106310,  # Deputy Head Admin
+        822620759255154749,  # Admin
+    )
     async def announce(self, message, channel: TextChannel, *, msg):
         await channel.send(msg)
 
@@ -560,7 +573,6 @@ class Moderation(commands.Cog):
     @application_checks.has_permissions(manage_messages=True)
     async def hidden_msg_analyser(self, interaction: Interaction, message):
         GOOGLE_API_KEY = self.GOOGLE_API_KEY
-        # message = message
 
         cclient = discovery.build(
             "commentanalyzer",

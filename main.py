@@ -427,6 +427,13 @@ class MyHelpCommand(commands.MinimalHelpCommand):
 client.help_command = MyHelpCommand()
 client.GOOGLE_API_KEY = GOOGLE_API_KEY
 client.LOG_CHANNEL_ID = LOG_CHANNEL_ID
+client.BYPASS_IDS = [
+    713512807580303440,  # OG
+    802725022560944160,  # 2nd Account
+    946434857368698920,  # Deleted User d05b8efc, not me
+    986315141308121129,  # Justin bot
+    1065714439380271164,  # Current
+]
 
 
 @client.command()
@@ -436,8 +443,8 @@ async def verify(ctx):
     await ctx.send(embed=embed, view=VerifyMenu())
 
 
-@client.command()
-@commands.has_any_role(822620759255154749, 935239717870518302)
+@client.command(hidden=True)
+@commands.has_any_role(822620759255154749)
 async def prepare(ctx):
     """Starts a persistent view."""
     # In order for a persistent view to be listened to, it needs to be sent to an actual message.
@@ -478,7 +485,7 @@ async def on_message(message):
     #  await channel.send(embed=embed)
     else:
         if message.content != "":
-            if message.channel.id == 1076981668574941205:
+            if message.channel.id == 927443239584301116:
                 analyze_request = {
                     "comment": {"text": message.content},
                     "requestedAttributes": {
