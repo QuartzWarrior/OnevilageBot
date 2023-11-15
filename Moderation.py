@@ -115,6 +115,7 @@ class Moderation(commands.Cog):
         897517045137178686,  # MVP
         863471477416394802,  # VIP
     )
+    @commands.cooldown(1, 5, commands.BucketType.user)
     async def rs(self, message):
         try:
             data = self.reaction_dict[message.channel.id]
@@ -178,6 +179,7 @@ class Moderation(commands.Cog):
         897517045137178686,  # MVP
         863471477416394802,  # VIP
     )
+    @commands.cooldown(1, 5, commands.BucketType.user)
     async def es(self, com_message):
         try:
             data = self.edit_dict[com_message.channel.id]
@@ -250,6 +252,7 @@ class Moderation(commands.Cog):
         897517045137178686,  # MVP
         863471477416394802,  # VIP
     )
+    @commands.cooldown(1, 5, commands.BucketType.user)
     async def snipe(self, com_message):
         try:
             data = self.snipe_dict[com_message.channel.id]

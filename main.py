@@ -1,4 +1,5 @@
 from googleapiclient import discovery
+from json import load, dump
 from decimal import Decimal
 from logging import getLogger, INFO, FileHandler, Formatter
 from nextcord import (
@@ -17,9 +18,9 @@ GOOGLE_API_KEY = ""  # Insert your perspective api key to enable message scannin
 
 CLARIFAI_API_KEY = ""  # OLD, don't need
 
-LOG_CHANNEL_ID = 0
+LOG_CHANNEL_ID = 0  # Insert your log channel id here
 
-TOKEN = ""
+TOKEN = ""  # Insert your bot token here
 
 cclient = discovery.build(
     "commentanalyzer",
@@ -402,8 +403,16 @@ class Client(commands.Bot):
             self.add_view(PersistentGiveaways())
             self.add_view(PersistentColours())
             self.persistent_views_added = True
-
+        self.afk = load(open("afk.json", "r"))
+        for _, value in self.afk.items():
+            value["time"] = utils.parse_time(value["time"])
         print(f"Logged in as {self.user} (ID: {self.user.id})")
+
+    async def on_close(self):
+        for _, value in self.afk.items():
+            value["time"] = str(value["time"])
+        with open("afk.json", "w") as f:
+            dump(self.afk, f, indent=4)
 
 
 client = Client(
@@ -425,6 +434,7 @@ class MyHelpCommand(commands.MinimalHelpCommand):
 
 
 client.help_command = MyHelpCommand()
+client.afk = {}
 client.GOOGLE_API_KEY = GOOGLE_API_KEY
 client.LOG_CHANNEL_ID = LOG_CHANNEL_ID
 client.BYPASS_IDS = [
@@ -658,4 +668,5 @@ client.load_extension("Music")
 client.load_extension("Moderation")
 client.load_extension("Tasks")
 client.load_extension("reactionroles")
+client.load_extension("Afk")
 client.run(TOKEN)
