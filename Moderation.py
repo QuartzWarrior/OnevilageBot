@@ -68,7 +68,7 @@ class Moderation(commands.Cog):
 
     @commands.Cog.listener()
     async def on_raw_reaction_remove(self, payload):
-        # if (message.author.id in self.BYPASS_IDS): return # Add this code to bypass yourself
+        # if (message.author.id in self.client.BYPASS_IDS): return # Add this code to bypass yourself
         try:
             if len(self.reaction_dict[payload.channel_id]) >= 2:
                 self.reaction_dict[payload.channel_id].pop(0)
@@ -76,7 +76,7 @@ class Moderation(commands.Cog):
                 {
                     "emoji": payload.emoji.name,
                     "emoji_url": payload.emoji.url,
-                    "created": payload.event_time,
+                    "created": datetime.now(),
                     "author": payload.user_id,
                 }
             )
@@ -85,11 +85,11 @@ class Moderation(commands.Cog):
                 {
                     "emoji": payload.emoji.name,
                     "emoji_url": payload.emoji.url,
-                    "created": payload.event_time,
+                    "created": datetime.now(),
                     "author": payload.user_id,
                 }
             ]
-        channel = self.client.get_channel(self.LOG_CHANNEL_ID)
+        channel = self.client.get_channel(self.client.LOG_CHANNEL_ID)
         user = self.client.get_user(payload.user_id)
         embed = Embed(title="Reaction Removed", description=f"Removed by {user}")
         embed.add_field(name="Emoji", value=f":{payload.emoji.name}:")
@@ -97,8 +97,8 @@ class Moderation(commands.Cog):
 
     @commands.Cog.listener()
     async def on_raw_reaction_add(self, payload):
-        # if (message.author.id in self.BYPASS_IDS): return # Add this code to bypass yourself
-        channel = self.client.get_channel(self.LOG_CHANNEL_ID)
+        # if (message.author.id in self.client.BYPASS_IDS): return # Add this code to bypass yourself
+        channel = self.client.get_channel(self.client.LOG_CHANNEL_ID)
         embed = Embed(title="Reaction Added", description=f"Added by {payload.member}")
         embed.add_field(name="Emoji", value=f":{payload.emoji.name}:")
         await channel.send(embed=embed)
@@ -142,7 +142,7 @@ class Moderation(commands.Cog):
     async def on_message_edit(self, before, after):
         if (
             before.content
-            != after.content  # and not (message.author.id in self.BYPASS_IDS) # Add this code to bypass yourself
+            != after.content  # and not (message.author.id in self.client.BYPASS_IDS) # Add this code to bypass yourself
         ):
             try:
                 if len(self.edit_dict[before.channel.id]) >= 2:
@@ -217,7 +217,7 @@ class Moderation(commands.Cog):
             return
         if (
             message.content
-            or message.attachments  # and not (message.author.id in self.BYPASS_IDS) # Add this code to bypass yourself
+            or message.attachments  # and not (message.author.id in self.client.BYPASS_IDS) # Add this code to bypass yourself
         ):
             try:
                 if len(self.snipe_dict[message.channel.id]) >= 2:
@@ -575,7 +575,7 @@ class Moderation(commands.Cog):
     @message_command(name="Hidden Message Analyser", guild_ids=[822525128306196500])
     @application_checks.has_permissions(manage_messages=True)
     async def hidden_msg_analyser(self, interaction: Interaction, message):
-        GOOGLE_API_KEY = self.GOOGLE_API_KEY
+        GOOGLE_API_KEY = self.client.GOOGLE_API_KEY
 
         cclient = discovery.build(
             "commentanalyzer",
@@ -629,7 +629,7 @@ class Moderation(commands.Cog):
     @message_command(name="Message Analyser", guild_ids=[822525128306196500])
     @application_checks.has_permissions(manage_messages=True)
     async def msg_analyser(self, interaction: Interaction, message):
-        GOOGLE_API_KEY = self.GOOGLE_API_KEY
+        GOOGLE_API_KEY = self.client.GOOGLE_API_KEY
         # message = message
 
         cclient = discovery.build(
