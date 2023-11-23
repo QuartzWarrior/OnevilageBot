@@ -7,6 +7,7 @@ from nextcord import (
     Member,
     TextChannel,
     message_command,
+    Message,
 )
 from nextcord.ext import commands, application_checks
 from nextcord.ext.commands.errors import MissingPermissions, MissingRequiredArgument
@@ -116,7 +117,7 @@ class Moderation(commands.Cog):
         863471477416394802,  # VIP
     )
     @commands.cooldown(1, 5, commands.BucketType.user)
-    async def rs(self, message):
+    async def rs(self, message: commands.Context):
         try:
             data = self.reaction_dict[message.channel.id]
         except KeyError:
@@ -139,7 +140,7 @@ class Moderation(commands.Cog):
             await message.send("No reactions to snipe!", delete_after=3)
 
     @commands.Cog.listener()
-    async def on_message_edit(self, before, after):
+    async def on_message_edit(self, before: Message, after: Message):
         if (
             before.content
             != after.content  # and not (message.author.id in self.client.BYPASS_IDS) # Add this code to bypass yourself
@@ -180,7 +181,7 @@ class Moderation(commands.Cog):
         863471477416394802,  # VIP
     )
     @commands.cooldown(1, 5, commands.BucketType.user)
-    async def es(self, com_message):
+    async def es(self, com_message: commands.Context):
         try:
             data = self.edit_dict[com_message.channel.id]
         except KeyError:
@@ -212,7 +213,7 @@ class Moderation(commands.Cog):
 
     # Current method
     @commands.Cog.listener()
-    async def on_message_delete(self, message):
+    async def on_message_delete(self, message: Message):
         if message.author.id == self.client.user.id:
             return
         if (
@@ -253,7 +254,7 @@ class Moderation(commands.Cog):
         863471477416394802,  # VIP
     )
     @commands.cooldown(1, 5, commands.BucketType.user)
-    async def snipe(self, com_message):
+    async def snipe(self, com_message: commands.Context):
         try:
             data = self.snipe_dict[com_message.channel.id]
         except KeyError:
@@ -295,7 +296,7 @@ class Moderation(commands.Cog):
 
     @commands.command(name="modsnipe", aliases=["mods"], hidden=True)
     @commands.has_guild_permissions(manage_messages=True)
-    async def multisniped(self, ctx):
+    async def multisniped(self, ctx: commands.Context):
         try:
             id = ctx.message.channel
             wow = self.snipe_dict[id]
@@ -339,7 +340,7 @@ class Moderation(commands.Cog):
             # print(self.snipe_dict)
 
     @commands.command(hidden=True)
-    async def sniped(self, ctx):
+    async def sniped(self, ctx: commands.Context):
         try:
             id = ctx.message.channel
             wow = self.snipe_dict[id]
@@ -383,7 +384,7 @@ class Moderation(commands.Cog):
         aliases=["clean"], description="Cleans a certian amount of messages."
     )
     @commands.has_guild_permissions(manage_messages=True)
-    async def Purge(self, message, limit: int = None):
+    async def Purge(self, message: commands.Context, limit: int = None):
         if limit is None:
             await message.send("Correct usage is `o!Purge <user>`")
         else:
@@ -401,7 +402,7 @@ class Moderation(commands.Cog):
     @commands.has_guild_permissions(moderate_members=True)
     async def Mute(
         self,
-        message,
+        message: commands.Context,
         user: Member = None,
         reason: str = None,
         days: int = 1,
@@ -426,7 +427,9 @@ class Moderation(commands.Cog):
 
     @commands.command()
     @commands.has_guild_permissions(moderate_members=True)
-    async def Unmute(self, message, user: Member = None, reason: str = None):
+    async def Unmute(
+        self, message: commands.Context, user: Member = None, reason: str = None
+    ):
         if user is None:
             await message.send("Correct usage is `o!Unmute [user] <reason>`")
         else:
@@ -435,7 +438,9 @@ class Moderation(commands.Cog):
 
     @commands.command()
     @commands.has_guild_permissions(kick_members=True)
-    async def Kick(self, message, user: Member = None, *, reason=None):
+    async def Kick(
+        self, message: commands.Context, user: Member = None, *, reason=None
+    ):
         if user is None:
             await message.send("Correct usage is `o!Kick <user>`")
         else:
@@ -456,7 +461,7 @@ class Moderation(commands.Cog):
 
     @commands.command()
     @commands.has_guild_permissions(ban_members=True)
-    async def Ban(self, message, user: Member = None, *, reason=None):
+    async def Ban(self, message: commands.Context, user: Member = None, *, reason=None):
         if user is None:
             await message.send("Correct usage is `o!Ban <user>`")
         else:
@@ -477,7 +482,7 @@ class Moderation(commands.Cog):
 
     @commands.command()
     @commands.has_guild_permissions(ban_members=True)
-    async def Unban(self, message, *, user=None):
+    async def Unban(self, message: commands.Context, *, user=None):
         if user is None:
             await message.send("Correct usage is `o!Unban <user>`")
         else:
@@ -502,7 +507,7 @@ class Moderation(commands.Cog):
 
     @commands.command()
     @commands.has_permissions(administrator=True)
-    async def member(self, message, member: Member):
+    async def member(self, message: commands.Context, member: Member):
         embed = Embed(title=f"About {member.name}", description="")
         embed.set_thumbnail(url=member.display_avatar)
         embed.add_field(name="ID", value=member.id)
@@ -512,7 +517,7 @@ class Moderation(commands.Cog):
 
     @commands.command()
     @commands.has_permissions(manage_channels=True)
-    async def lock(self, message, channel: TextChannel = None):
+    async def lock(self, message: commands.Context, channel: TextChannel = None):
         if channel is None:
             channel = message.channel
         everyone = message.guild.get_role(822525128306196500)
@@ -530,7 +535,7 @@ class Moderation(commands.Cog):
 
     @commands.command()
     @commands.has_permissions(manage_channels=True)
-    async def unlock(self, message, channel: TextChannel = None):
+    async def unlock(self, message: commands.Context, channel: TextChannel = None):
         if channel is None:
             channel = message.channel
         await channel.edit(sync_permissions=True, reason="Unlocked channel.")
@@ -538,7 +543,7 @@ class Moderation(commands.Cog):
 
     @commands.command(aliases=["sm"])
     @commands.has_permissions(manage_channels=True)
-    async def slowmode(self, message, amount: int = None):
+    async def slowmode(self, message: commands.Context, amount: int = None):
         if amount is None:
             await message.send("Correct usage is\n`o!slowmode <amount-in-seconds>`")
         else:
@@ -554,15 +559,15 @@ class Moderation(commands.Cog):
         941732494884106310,  # Deputy Head Admin
         822620759255154749,  # Admin
     )
-    async def announce(self, message, channel: TextChannel, *, msg):
+    async def announce(self, _: commands.Context, channel: TextChannel, *, msg):
         await channel.send(msg)
 
     @commands.command()
-    async def ping(self, ctx):
+    async def ping(self, ctx: commands.Context):
         await ctx.send(f"Pong! {round(self.client.latency * 1000)}ms")
 
     @commands.command()
-    async def watchlist(self, ctx):
+    async def watchlist(self, ctx: commands.Context):
         roles = await ctx.guild.fetch_roles()
         full = []
         for role in roles:

@@ -12,11 +12,15 @@ from nextcord import (
     Interaction,
     Color,
     Intents,
+    Message,
 )
+from clarifai_grpc.channel.clarifai_channel import ClarifaiChannel
+from clarifai_grpc.grpc.api import resources_pb2, service_pb2, service_pb2_grpc
+from clarifai_grpc.grpc.api.status import status_code_pb2
 
 GOOGLE_API_KEY = ""  # Insert your perspective api key to enable message scanning
 
-CLARIFAI_API_KEY = ""  # OLD, don't need
+CLARIFAI_API_KEY = ""  # Insert your clarifai api key ( personal access token ) to enable image scanning
 
 LOG_CHANNEL_ID = 0  # Insert your log channel id here
 
@@ -29,6 +33,9 @@ cclient = discovery.build(
     discoveryServiceUrl="https://commentanalyzer.googleapis.com/$discovery/rest?version=v1alpha1",
     static_discovery=False,
 )
+
+stub = service_pb2_grpc.V2Stub(ClarifaiChannel.get_grpc_channel())
+userDataObject = resources_pb2.UserAppIDSet(user_id="clarifai", app_id="main")
 
 persistent_views_added = False
 
@@ -475,7 +482,7 @@ async def on_command_error(message, error):
 
 
 @client.event
-async def on_message(message):
+async def on_message(message: Message):
     if message.author == client.user:
         return
     elif message.channel.id == 863302095603236884:
@@ -549,7 +556,7 @@ async def on_message(message):
             ]
 
             toxscore = response["attributeScores"]["TOXICITY"]["summaryScore"]["value"]
-            if response["attributeScores"]["TOXICITY"]["summaryScore"]["value"] > 0.5:
+            if toxscore > 0.5:
                 chan = client.get_channel(LOG_CHANNEL_ID)
                 await chan.send(
                     embed=embed.set_thumbnail(url=message.author.display_avatar)
@@ -557,111 +564,72 @@ async def on_message(message):
                 # await chan.send(embed=Embed(title="High toxicity", description=f"Toxicity score: {toxscore} out of 1.0\n\n{message.content}\n\n[Jump to message]({message.jump_url})").set_image(url=message.author.display_avatar))
             await client.process_commands(message)
 
+        if message.attachments:
+            for attachment in message.attachments:
+                if attachment.filename.endswith(("jpg", "jpeg", "png", "bmp", "webp")):
+                    request = service_pb2.PostModelOutputsRequest(
+                        user_app_id=userDataObject,
+                        model_id="moderation-recognition",
+                        inputs=[
+                            resources_pb2.Input(
+                                data=resources_pb2.Data(
+                                    image=resources_pb2.Image(url=attachment.url)
+                                )
+                            )
+                        ],
+                    )
+                    response = stub.PostModelOutputs(
+                        request,
+                        metadata=(("authorization", f"Key {CLARIFAI_API_KEY}"),),
+                    )
 
-#    else:
-#        if message.attachments:
-#            print(message.attachments[-1].url)
-#            stub = service_pb2_grpc.V2Stub(ClarifaiChannel.get_grpc_channel())
-#
-#            metadata = (('authorization', f'Key {CLARIFAI_API_KEY}'),)
-#            request = service_pb2.PostModelOutputsRequest(
-#                # model
-#                model_id='e9576d86d2004ed1a38ba0cf39ecb4b1',
-#                inputs=[
-#                resources_pb2.Input(data=resources_pb2.Data(image=resources_pb2.Image(url=message.attachments[-1].url)))
-#                ])
-#            response = stub.PostModelOutputs(request, metadata=metadata)
-#
-#            if response.status.code != status_code_pb2.SUCCESS:
-#                print("There was an error with your request!")
-#                print("\tCode: {}".format(response.outputs[0].status.code))
-#                print("\tDescription: {}".format(response.outputs[0].status.description))
-#                print("\tDetails: {}".format(response.outputs[0].status.details))
-#                raise Exception("Request failed, status code: " + str(response.status.code))
-#            else:
-#            #print(response.outputs[0].data.concepts)
-#                for item in response.outputs[0].data.concepts:
-#                    if 'nsfw' in item.name:
-#                        n=item.value
-#                print('%.2f' % (n))
-#                if int('%.2f' % (n)) > int(0.5):
-#                    for concept in response.outputs[0].data.concepts:
-#                        q=str(concept.name)+str(": ")+str(concept.value)+str("\n")
-#                        try:
-#                            a=q+" "+o
-#                        except UnboundLocalError:
-#                            a=q
-#                        try:
-#                            o=a
-#                        except UnboundLocalError:
-#                            o=""
-#                    await message.channel.send(o, delete_after=10)
-#                    await message.delete()
-#        else:
-#            if message.content.startswith('!'):
-#                pass
-#            else:
-#                roles=", ".join([str(r.name) for r in message.author.roles])
-#                if "bypass" in roles:
-#                    pass
-#                else:
-#                    metadata = (('authorization', f'Key {CLARIFAI_API_KEY}'),)
-#                    userDataObject = resources_pb2.UserAppIDSet(user_id=str(os.environ['USR_ID']), app_id=str(os.environ['APP_ID']))
-#
-#                    channel = ClarifaiChannel.get_grpc_channel()
-#                    stub = service_pb2_grpc.V2Stub(channel)
-#                    post_model_outputs_response = stub.PostModelOutputs(
-#                        service_pb2.PostModelOutputsRequest(
-#                            user_app_id=userDataObject,
-#                            model_id="c1a2ac2adba0204d859fb89fd44d6ac9",
-#                            inputs=[
-#                                resources_pb2.Input(
-#                                    data=resources_pb2.Data(
-#                                        text=resources_pb2.Text(
-#                                            raw=str(message.content)
-#                                        )
-#                                    )
-#                                )
-#                            ]
-#                        ),
-#                        metadata=metadata
-#                    )
-#                    if post_model_outputs_response.status.code != status_code_pb2.SUCCESS:
-#                        print("There was an error with your request!")
-#                        print("\tCode: {}".format(post_model_outputs_response.outputs[0].status.code))
-#                        print("\tDescription: {}".format(post_model_outputs_response.outputs[0].status.description))
-#                        print("\tDetails: {}".format(post_model_outputs_response.outputs[0].status.details))
-#                        raise Exception("Post model outputs failed, status: " + post_model_outputs_response.status.description)
-#                    else:
-#                        output = post_model_outputs_response.outputs[0]
-#
-#                        o=""
-#                        for concept in output.data.concepts:
-#                            value=round(Decimal(concept.value), 2)
-#                            if int(value) > 0.50:
-#                                q='yes-'+str(concept.name)+': '+str(value)
-#                            else:
-#                                q='no'
-#                            try:
-#                                a=q+" "+o
-#                            except UnboundLocalError:
-#                                a=q
-#                            try:
-#                                o=a
-#                            except UnboundLocalError:
-#                                o=""
-#                        if "yes" in o:
-#                            msg=o.replace('yes-', '').replace('no', '')
-#                            content=message.content
-#                            channel = client.get_channel(LOG_CHANNEL_ID)
-#                            await channel.send(f"{message.author.name}#{message.author.discriminator} tried to cuss in {message.channel.name}.\n\nRatings/Predictions:\n{msg}\n\n{message.author.name} said `{content}`")
-#                            await message.channel.send(msg, delete_after=10)
-#                            await message.delete()
-#        if message.channel.name == "destroyed":
-#            print(str(message.author.name)+str(" said ")+str(message.content))
-#            await client.process_commands(message)
-#        else:
-#            await client.process_commands(message)
+                    if response.status.code != status_code_pb2.SUCCESS:
+                        print("There was an error with your request!")
+                        print("\tCode: {}".format(response.outputs[0].status.code))
+                        print(
+                            "\tDescription: {}".format(
+                                response.outputs[0].status.description
+                            )
+                        )
+                        print(
+                            "\tDetails: {}".format(response.outputs[0].status.details)
+                        )
+                        raise Exception(
+                            "Request failed, status code: " + str(response.status.code)
+                        )
+                    else:
+                        outputs = {
+                            "drug": 0,
+                            "explicit": 0,
+                            "gore": 0,
+                            "suggestive": 0,
+                            "safe": 0,
+                        }
+                        for item in response.outputs:
+                            for concept in item.data.concepts:
+                                outputs[concept.name] += concept.value
+                        for key in outputs.keys():
+                            outputs[key] /= len(response.outputs)
+                        if outputs["safe"] < 0.5:
+                            chan = client.get_channel(LOG_CHANNEL_ID)
+                            embed = Embed(
+                                title="High check",
+                                description=f"Image: {attachment.filename}\n\n[Jump to message]({message.jump_url})",
+                            )
+                            embed.set_author(
+                                icon_url=message.author.display_avatar,
+                                name=message.author,
+                                url=f"https://discord.com/users/{message.author.id}",
+                            )
+                            embed.set_thumbnail(url=attachment.url)
+                            for key in outputs.keys():
+                                embed.add_field(
+                                    name=key.title(),
+                                    value=str(100 * round(Decimal(outputs[key]), 2))
+                                    + "%",
+                                )
+                            await chan.send(embed=embed)
+
 
 client.load_extension("cogfunctions")
 client.load_extension("Music")
